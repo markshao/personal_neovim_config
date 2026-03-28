@@ -47,4 +47,4 @@ map("n", "<leader>fg", "<cmd>Telescope live_grep<CR>", { desc = "Live grep (keyw
 map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Find buffers" })              -- 搜索已打开的缓冲区
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Find help tags" })          -- 搜索帮助文档
 map("n", "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Find document symbols" }) -- 当前文件 symbol
-map("n", "<leader>fS", "<cmd>Telescope lsp_workspace_symbols<CR>", { desc = "Find workspace symbols" }) -- 全局 symbol
+map("n", "<leader>fS", "<cmd>Telescope lsp_dynamic_workspace_symbols<CR>", { desc = "Find workspace symbols" }) -- 全局 symbol（输入关键词筛选）

@@ -14,6 +14,34 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 --------------------------------------------------------------------------------
+-- Treesitter 兼容补丁
+--------------------------------------------------------------------------------
+do
+  local ok, parsers = pcall(require, "nvim-treesitter.parsers")
+  if ok and type(parsers) == "table" then
+    if type(parsers.ft_to_lang) ~= "function" then
+      parsers.ft_to_lang = function(ft)
+        return vim.treesitter.language.get_lang(ft) or ft
+      end
+    end
+    if type(parsers.get_parser) ~= "function" then
+      parsers.get_parser = function(bufnr, lang)
+        return vim.treesitter.get_parser(bufnr, lang)
+      end
+    end
+  end
+end
+
+do
+  local ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+  if ok and type(ts_configs) == "table" and type(ts_configs.is_enabled) ~= "function" then
+    ts_configs.is_enabled = function(_, lang, _)
+      return pcall(vim.treesitter.language.add, lang)
+    end
+  end
+end
+
+--------------------------------------------------------------------------------
 -- 自动补全配置 (nvim-cmp)
 --------------------------------------------------------------------------------
 -- 使用 pcall 保护调用，防止在插件未完全加载时引发报错

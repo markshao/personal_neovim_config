@@ -31,3 +31,8 @@ opt.swapfile = false        -- 禁用 swap 文件
 opt.undofile = true         -- 开启持久化撤销历史
 opt.splitright = true       -- 垂直分割窗口时，向右侧分割
 opt.splitbelow = true       -- 水平分割窗口时，向下侧分割
+
+-- 确保文件类型与语法高亮开启，并使用对比更明显的内置主题
+vim.cmd("filetype plugin indent on")
+vim.cmd("syntax on")
+pcall(vim.cmd.colorscheme, "habamax")

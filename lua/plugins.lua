@@ -129,6 +129,10 @@ local plugins = {
         defaults = {
           -- 这里可以添加 telescope 的全局配置
           file_ignore_patterns = { "node_modules", ".git/", ".cache" },
+          preview = {
+            -- Keep Telescope preview stable across Neovim/Treesitter mismatches.
+            treesitter = false,
+          },
         },
       })
     end,

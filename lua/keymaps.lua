@@ -38,7 +38,7 @@ map("n", "<leader>bd", "<cmd>bdelete<CR>", { desc = "Close buffer" })
 -- === 插件特定按键映射 ===
 -- nvim-tree
 map("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })      -- 开启/关闭文件树
-map("n", "<leader>o", "<cmd>NvimTreeFocus<CR>", { desc = "Focus NvimTree" })        -- 光标焦点移至文件树
+map("n", "<leader>o", "<cmd>NvimTreeFindFile<CR>", { desc = "Reveal current file in NvimTree" }) -- 在文件树中定位当前文件
 
 -- telescope (全局搜索)
 -- 这里不再使用 pcall，改为通过 :Telescope 命令的方式来映射，这样就不会在启动时要求模块已加载，完全依赖 lazy.nvim 的延迟加载机制
@@ -48,3 +48,12 @@ map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Find buffers" }) 
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Find help tags" })          -- 搜索帮助文档
 map("n", "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Find document symbols" }) -- 当前文件 symbol
 map("n", "<leader>fS", "<cmd>Telescope lsp_dynamic_workspace_symbols<CR>", { desc = "Find workspace symbols" }) -- 全局 symbol（输入关键词筛选）
+map("n", "<leader>cq", function()
+  pcall(vim.cmd, "cclose")
+  pcall(vim.cmd, "lclose")
+end, { desc = "Close quickfix/location list" })
+map("n", "<leader>gb", "<cmd>Gitsigns blame_line<CR>", { desc = "Git blame current line" })
+map("n", "<leader>gB", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "Toggle inline git blame" })
+map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview git hunk" })
+map("n", "]c", "<cmd>Gitsigns next_hunk<CR>", { desc = "Next git hunk" })
+map("n", "[c", "<cmd>Gitsigns prev_hunk<CR>", { desc = "Prev git hunk" })

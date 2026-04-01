@@ -36,7 +36,7 @@ local plugins = {
       nvim_tree.setup({
         sort_by = "case_sensitive",
         view = {
-          width = 30,
+          adaptive_size = true,
         },
         renderer = {
           group_empty = true,
@@ -50,29 +50,23 @@ local plugins = {
 
   -- LSP / Linter / Formatter 管理器：mason.nvim 及配套插件
   {
-    "williamboman/mason.nvim",
-    dependencies = {
-      "williamboman/mason-lspconfig.nvim", -- 连接 mason 和 lspconfig
-      "neovim/nvim-lspconfig",             -- Neovim 官方 LSP 配置集合
-    },
-    config = function()
-      local mason_status, mason = pcall(require, "mason")
-      if not mason_status then return end
-      -- 初始化 mason
-      mason.setup()
+    "neovim/nvim-lspconfig",
+    lazy = false,
+  },
 
-      local mason_lspconfig_status, mason_lspconfig = pcall(require, "mason-lspconfig")
-      if not mason_lspconfig_status then return end
-      -- 配置 mason-lspconfig，指定我们需要自动安装的语言服务器
-      -- 我们主要针对 Python (pyright/ruff) 和 Golang (gopls)
-      mason_lspconfig.setup({
-        ensure_installed = {
-          "pyright", -- Python 静态类型检查及补全
-          "gopls",   -- Golang 官方 LSP
-          -- "ruff_lsp", -- Python linter & formatter (可选，速度极快)
-        },
-      })
-    end,
+  {
+    "williamboman/mason-lspconfig.nvim",
+    lazy = false,
+    dependencies = {
+      { "williamboman/mason.nvim", opts = {} },
+      "neovim/nvim-lspconfig",
+    },
+    opts = {
+      ensure_installed = {
+        "pyright",
+        "gopls",
+      },
+    },
   },
 
   -- 自动代码补全：nvim-cmp 及其生态
@@ -92,22 +86,24 @@ local plugins = {
   -- 语法高亮：nvim-treesitter
   {
     "nvim-treesitter/nvim-treesitter",
+    lazy = false,
     build = ":TSUpdate",
     config = function()
-      local status, configs = pcall(require, "nvim-treesitter.configs")
+      local status, treesitter = pcall(require, "nvim-treesitter")
       if not status then return end
 
-      configs.setup({
-        -- 添加你需要高亮的语言
-        ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "python", "go", "gomod", "gowork", "gosum", "bash", "json", "yaml", "markdown" },
-        -- 自动安装缺失的解析器
-        auto_install = true,
-        highlight = {
-          enable = true,
-          -- 禁用 Vim 原生的高亮，使用 Treesitter 的高亮
-          additional_vim_regex_highlighting = false,
-        },
-        indent = { enable = true }, -- 启用基于 Treesitter 的智能缩进
+      local languages = { "c", "lua", "vim", "vimdoc", "query", "python", "go", "gomod", "gowork", "gosum", "bash", "json", "yaml", "markdown" }
+      treesitter.setup({
+        install_dir = vim.fn.stdpath("data") .. "/site",
+      })
+
+      -- New nvim-treesitter enables features via Neovim APIs rather than old module toggles.
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = languages,
+        callback = function(args)
+          pcall(vim.treesitter.start, args.buf)
+          vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end,
       })
     end,
   },
@@ -134,6 +130,19 @@ local plugins = {
             treesitter = false,
           },
         },
+      })
+    end,
+  },
+
+  -- Git signs / blame
+  {
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      local status, gitsigns = pcall(require, "gitsigns")
+      if not status then return end
+
+      gitsigns.setup({
+        current_line_blame = false,
       })
     end,
   },

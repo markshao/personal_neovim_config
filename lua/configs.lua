@@ -14,6 +14,36 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 --------------------------------------------------------------------------------
+-- Python provider / 项目 venv 解析
+--------------------------------------------------------------------------------
+local function resolve_python()
+  local cwd = vim.uv.cwd() or vim.fn.getcwd()
+  local project_python = cwd .. "/.venv/bin/python"
+
+  if vim.fn.executable(project_python) == 1 then
+    return project_python
+  end
+
+  local system_python = vim.fn.exepath("python3")
+  if system_python ~= "" then
+    return system_python
+  end
+
+  return nil
+end
+
+local python_host = resolve_python()
+if python_host then
+  vim.g.python3_host_prog = python_host
+end
+
+if vim.fn.exists(":LspInfo") == 0 then
+  vim.api.nvim_create_user_command("LspInfo", function()
+    vim.cmd("checkhealth vim.lsp")
+  end, { desc = "Alias to :checkhealth vim.lsp" })
+end
+
+--------------------------------------------------------------------------------
 -- Treesitter 兼容补丁
 --------------------------------------------------------------------------------
 do
@@ -118,12 +148,7 @@ end
 --------------------------------------------------------------------------------
 -- LSP 配置 (针对 Python 和 Golang)
 --------------------------------------------------------------------------------
--- 使用 pcall 保护调用
-local lspconfig_status, lspconfig = pcall(require, "lspconfig")
-local mason_lspconfig_status, mason_lspconfig = pcall(require, "mason-lspconfig")
-
--- 确保 mason_lspconfig 成功加载且具有 setup_handlers 方法
-if lspconfig_status and mason_lspconfig_status and type(mason_lspconfig.setup_handlers) == "function" then
+if vim.lsp and vim.lsp.config and vim.lsp.enable then
   -- 获取 nvim-cmp 提供的 LSP capabilities，让 LSP 服务器知道我们支持高级补全
   local capabilities_status, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
   local capabilities = vim.lsp.protocol.make_client_capabilities()
@@ -147,49 +172,39 @@ if lspconfig_status and mason_lspconfig_status and type(mason_lspconfig.setup_ha
     end, bufopts)
   end
 
-  -- 遍历 mason-lspconfig 中我们设置的 ensure_installed 的服务器并进行配置
-  mason_lspconfig.setup_handlers({
-    -- 默认处理器：对所有安装的服务器生效
-    function(server_name)
-      lspconfig[server_name].setup({
-        on_attach = on_attach,
-        capabilities = capabilities, -- 注入补全能力
-      })
-    end,
-
-    -- 可以针对特定的服务器（如 gopls 或 pyright）进行自定义重写
-    -- 例如，对 gopls 的自定义设置：
-    ["gopls"] = function()
-      lspconfig.gopls.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          gopls = {
-            analyses = {
-              unusedparams = true,
-            },
-            staticcheck = true,
-            gofumpt = true,
-          },
+  vim.lsp.config("gopls", {
+    capabilities = capabilities,
+    on_attach = on_attach,
+    settings = {
+      gopls = {
+        analyses = {
+          unusedparams = true,
         },
-      })
-    end,
-    
-    -- Python 的 pyright 配置
-    ["pyright"] = function()
-      lspconfig.pyright.setup({
-        on_attach = on_attach,
-        capabilities = capabilities,
-        settings = {
-          python = {
-            analysis = {
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-              diagnosticMode = "workspace",
-            },
-          },
-        },
-      })
-    end,
+        staticcheck = true,
+        gofumpt = true,
+      },
+    },
   })
+  vim.lsp.enable("gopls")
+
+  local pyright_python = resolve_python()
+  local cwd = vim.uv.cwd() or vim.fn.getcwd()
+
+  vim.lsp.config("pyright", {
+    capabilities = capabilities,
+    on_attach = on_attach,
+    settings = {
+      python = {
+        pythonPath = pyright_python,
+        venvPath = cwd,
+        venv = ".venv",
+        analysis = {
+          autoSearchPaths = true,
+          useLibraryCodeForTypes = true,
+          diagnosticMode = "workspace",
+        },
+      },
+    },
+  })
+  vim.lsp.enable("pyright")
 end

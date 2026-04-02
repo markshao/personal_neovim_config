@@ -1,7 +1,6 @@
 -- 其他全局配置与杂项 (configs.lua)
 
--- 这部分可以用来放置不属于 options, keymaps 或 plugins 的代码。
--- 例如：自动命令 (autocmd) 的定义，界面特定重置等。
+local M = {}
 
 -- 示例：高亮被复制(Yank)的文本
 local highlight_group = vim.api.nvim_create_augroup("YankHighlight", { clear = true })
@@ -71,14 +70,13 @@ do
   end
 end
 
---------------------------------------------------------------------------------
--- 自动补全配置 (nvim-cmp)
---------------------------------------------------------------------------------
--- 使用 pcall 保护调用，防止在插件未完全加载时引发报错
-local cmp_status, cmp = pcall(require, "cmp")
-local luasnip_status, luasnip = pcall(require, "luasnip")
+function M.setup_cmp()
+  local cmp_status, cmp = pcall(require, "cmp")
+  local luasnip_status, luasnip = pcall(require, "luasnip")
+  if not (cmp_status and luasnip_status) then
+    return
+  end
 
-if cmp_status and luasnip_status then
   -- 加载 vscode 风格的代码片段库 (friendly-snippets)
   require("luasnip.loaders.from_vscode").lazy_load()
 
@@ -145,36 +143,43 @@ if cmp_status and luasnip_status then
   })
 end
 
---------------------------------------------------------------------------------
--- LSP 配置 (针对 Python 和 Golang)
---------------------------------------------------------------------------------
-if vim.lsp and vim.lsp.config and vim.lsp.enable then
-  -- 获取 nvim-cmp 提供的 LSP capabilities，让 LSP 服务器知道我们支持高级补全
+function M.lsp_capabilities()
   local capabilities_status, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
   local capabilities = vim.lsp.protocol.make_client_capabilities()
   if capabilities_status then
     capabilities = cmp_nvim_lsp.default_capabilities()
   end
 
-  -- 定义 LSP attach 时的快捷键（只有当 LSP 成功挂载到当前文件时才会生效）
-  local on_attach = function(_, bufnr)
-    local bufopts = { noremap = true, silent = true, buffer = bufnr }
-    local keymap = vim.keymap.set
+  return capabilities
+end
 
-    keymap("n", "gd", vim.lsp.buf.definition, bufopts)         -- 跳转到定义
-    keymap("n", "K", vim.lsp.buf.hover, bufopts)               -- 悬浮显示文档
-    keymap("n", "gi", vim.lsp.buf.implementation, bufopts)     -- 跳转到实现
-    keymap("n", "gr", vim.lsp.buf.references, bufopts)         -- 查找引用
-    keymap("n", "<leader>rn", vim.lsp.buf.rename, bufopts)     -- 重命名变量
-    keymap("n", "<leader>ca", vim.lsp.buf.code_action, bufopts) -- 代码操作/快速修复
-    keymap("n", "<leader>f", function()                        -- 格式化当前文件
-      vim.lsp.buf.format { async = true }
-    end, bufopts)
+function M.lsp_on_attach(_, bufnr)
+  local bufopts = { noremap = true, silent = true, buffer = bufnr }
+  local keymap = vim.keymap.set
+
+  keymap("n", "gd", vim.lsp.buf.definition, bufopts)
+  keymap("n", "K", vim.lsp.buf.hover, bufopts)
+  keymap("n", "gi", vim.lsp.buf.implementation, bufopts)
+  keymap("n", "gr", vim.lsp.buf.references, bufopts)
+  keymap("n", "<leader>rn", vim.lsp.buf.rename, bufopts)
+  keymap("n", "<leader>ca", vim.lsp.buf.code_action, bufopts)
+  keymap("n", "<leader>f", function()
+    vim.lsp.buf.format({ async = true })
+  end, bufopts)
+end
+
+--------------------------------------------------------------------------------
+-- LSP 配置
+--------------------------------------------------------------------------------
+function M.setup_lsp()
+  if not (vim.lsp and vim.lsp.config and vim.lsp.enable) then
+    return
   end
 
+  local capabilities = M.lsp_capabilities()
   vim.lsp.config("gopls", {
     capabilities = capabilities,
-    on_attach = on_attach,
+    on_attach = M.lsp_on_attach,
     settings = {
       gopls = {
         analyses = {
@@ -192,7 +197,7 @@ if vim.lsp and vim.lsp.config and vim.lsp.enable then
 
   vim.lsp.config("pyright", {
     capabilities = capabilities,
-    on_attach = on_attach,
+    on_attach = M.lsp_on_attach,
     settings = {
       python = {
         pythonPath = pyright_python,
@@ -207,4 +212,47 @@ if vim.lsp and vim.lsp.config and vim.lsp.enable then
     },
   })
   vim.lsp.enable("pyright")
+
+  vim.lsp.config("ts_ls", {
+    capabilities = capabilities,
+    on_attach = function(client, bufnr)
+      M.lsp_on_attach(client, bufnr)
+
+      vim.keymap.set("n", "<leader>co", "<cmd>LspTypescriptSourceAction<CR>", {
+        noremap = true,
+        silent = true,
+        buffer = bufnr,
+        desc = "TypeScript source actions",
+      })
+    end,
+    settings = {
+      typescript = {
+        inlayHints = {
+          includeInlayParameterNameHints = "literals",
+          includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+          includeInlayFunctionParameterTypeHints = true,
+          includeInlayVariableTypeHints = false,
+          includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+          includeInlayPropertyDeclarationTypeHints = true,
+          includeInlayFunctionLikeReturnTypeHints = true,
+          includeInlayEnumMemberValueHints = true,
+        },
+      },
+      javascript = {
+        inlayHints = {
+          includeInlayParameterNameHints = "all",
+          includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+          includeInlayFunctionParameterTypeHints = true,
+          includeInlayVariableTypeHints = false,
+          includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+          includeInlayPropertyDeclarationTypeHints = true,
+          includeInlayFunctionLikeReturnTypeHints = true,
+          includeInlayEnumMemberValueHints = true,
+        },
+      },
+    },
+  })
+  vim.lsp.enable("ts_ls")
 end
+
+return M

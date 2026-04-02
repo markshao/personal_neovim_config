@@ -21,7 +21,15 @@ local plugins = {
   {
     "nvim-tree/nvim-tree.lua",
     version = "*",
-    lazy = false,
+    cmd = {
+      "NvimTreeToggle",
+      "NvimTreeFindFile",
+      "NvimTreeFocus",
+    },
+    keys = {
+      { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "Toggle NvimTree" },
+      { "<leader>o", "<cmd>NvimTreeFindFile<CR>", desc = "Reveal current file in NvimTree" },
+    },
     dependencies = {
       "nvim-tree/nvim-web-devicons", -- 文件图标支持
     },
@@ -51,12 +59,15 @@ local plugins = {
   -- LSP / Linter / Formatter 管理器：mason.nvim 及配套插件
   {
     "neovim/nvim-lspconfig",
-    lazy = false,
+    event = { "BufReadPre", "BufNewFile" },
+    config = function()
+      require("configs").setup_lsp()
+    end,
   },
 
   {
     "williamboman/mason-lspconfig.nvim",
-    lazy = false,
+    event = { "BufReadPre", "BufNewFile" },
     dependencies = {
       { "williamboman/mason.nvim", opts = {} },
       "neovim/nvim-lspconfig",
@@ -65,6 +76,7 @@ local plugins = {
       ensure_installed = {
         "pyright",
         "gopls",
+        "ts_ls",
       },
     },
   },
@@ -72,6 +84,7 @@ local plugins = {
   -- 自动代码补全：nvim-cmp 及其生态
   {
     "hrsh7th/nvim-cmp",
+    event = { "InsertEnter", "CmdlineEnter" },
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",     -- LSP 补全源
       "hrsh7th/cmp-buffer",       -- 缓冲区文本补全源
@@ -81,18 +94,39 @@ local plugins = {
       "saadparwaiz1/cmp_luasnip", -- 代码片段补全源
       "rafamadriz/friendly-snippets", -- 预置的各种语言代码片段集合
     },
+    config = function()
+      require("configs").setup_cmp()
+    end,
   },
 
   -- 语法高亮：nvim-treesitter
   {
     "nvim-treesitter/nvim-treesitter",
-    lazy = false,
+    event = { "BufReadPost", "BufNewFile" },
     build = ":TSUpdate",
     config = function()
       local status, treesitter = pcall(require, "nvim-treesitter")
       if not status then return end
 
-      local languages = { "c", "lua", "vim", "vimdoc", "query", "python", "go", "gomod", "gowork", "gosum", "bash", "json", "yaml", "markdown" }
+      local languages = {
+        "c",
+        "lua",
+        "vim",
+        "vimdoc",
+        "query",
+        "python",
+        "go",
+        "gomod",
+        "gowork",
+        "gosum",
+        "bash",
+        "javascript",
+        "typescript",
+        "tsx",
+        "json",
+        "yaml",
+        "markdown",
+      }
       treesitter.setup({
         install_dir = vim.fn.stdpath("data") .. "/site",
       })
@@ -112,6 +146,15 @@ local plugins = {
   {
     "nvim-telescope/telescope.nvim",
     tag = "0.1.8",
+    cmd = "Telescope",
+    keys = {
+      { "<leader>ff", "<cmd>Telescope find_files<CR>", desc = "Find files" },
+      { "<leader>fg", "<cmd>Telescope live_grep<CR>", desc = "Live grep (keywords)" },
+      { "<leader>fb", "<cmd>Telescope buffers<CR>", desc = "Find buffers" },
+      { "<leader>fh", "<cmd>Telescope help_tags<CR>", desc = "Find help tags" },
+      { "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", desc = "Find document symbols" },
+      { "<leader>fS", "<cmd>Telescope lsp_dynamic_workspace_symbols<CR>", desc = "Find workspace symbols" },
+    },
     dependencies = { 
       "nvim-lua/plenary.nvim",
       -- 可选：如果你本地有 C 编译器 (gcc/clang) 和 make，可以加上下面这个提升搜索性能
@@ -137,6 +180,7 @@ local plugins = {
   -- Git signs / blame
   {
     "lewis6991/gitsigns.nvim",
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
       local status, gitsigns = pcall(require, "gitsigns")
       if not status then return end
@@ -151,6 +195,9 @@ local plugins = {
 -- 3. 配置 lazy.nvim
 local opts = {
   -- 可以在这里添加 lazy.nvim 的特定配置，例如 UI 颜色等
+  defaults = {
+    lazy = true,
+  },
 }
 
 require("lazy").setup(plugins, opts)

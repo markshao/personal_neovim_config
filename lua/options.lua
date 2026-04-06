@@ -3,8 +3,8 @@
 local opt = vim.opt
 
 -- 外观与显示
-opt.number = true           -- 显示绝对行号
-opt.relativenumber = true   -- 显示相对行号
+opt.number = true           -- 显示固定行号
+opt.relativenumber = false  -- 关闭相对行号（行号固定不变）
 opt.cursorline = true       -- 高亮当前行
 opt.termguicolors = true    -- 开启 True Color (24-bit 颜色) 支持
 opt.signcolumn = "yes"      -- 始终显示标志列（防止左侧抖动）
@@ -32,7 +32,6 @@ opt.undofile = true         -- 开启持久化撤销历史
 opt.splitright = true       -- 垂直分割窗口时，向右侧分割
 opt.splitbelow = true       -- 水平分割窗口时，向下侧分割
 
--- 确保文件类型与语法高亮开启，并使用对比更明显的内置主题
+-- 确保文件类型与语法高亮开启
 vim.cmd("filetype plugin indent on")
 vim.cmd("syntax on")
-pcall(vim.cmd.colorscheme, "habamax")

@@ -17,6 +17,64 @@ vim.opt.rtp:prepend(lazypath)
 
 -- 2. 插件列表
 local plugins = {
+  -- 主题：Kanagawa
+  {
+    "rebelot/kanagawa.nvim",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      local ok, kanagawa = pcall(require, "kanagawa")
+      if not ok then return end
+
+      kanagawa.setup({
+        theme = "dragon",
+        compile = false,
+        transparent = false,
+        dimInactive = false,
+        overrides = function(colors)
+          local theme = colors.theme
+          local palette = colors.palette
+
+          return {
+            -- Python: make decorators/types/builtins pop harder.
+            ["@attribute.python"] = { fg = palette.springViolet1, bold = true, italic = true },
+            ["@function.builtin.python"] = { fg = palette.springBlue, bold = true },
+            ["@function.method.python"] = { fg = palette.crystalBlue, bold = true },
+            ["@function.method.call.python"] = { fg = palette.crystalBlue },
+            ["@keyword.import.python"] = { fg = palette.dragonRed, bold = true },
+            ["@keyword.exception.python"] = { fg = palette.peachRed, bold = true },
+            ["@module.python"] = { fg = palette.carpYellow, bold = true },
+            ["@type.python"] = { fg = palette.waveAqua2, bold = true },
+            ["@type.builtin.python"] = { fg = palette.springBlue, bold = true },
+            ["@variable.builtin.python"] = { fg = palette.surimiOrange, italic = true },
+            ["@variable.parameter.python"] = { fg = palette.oldWhite },
+            ["@lsp.type.class.python"] = { fg = palette.waveAqua2, bold = true },
+            ["@lsp.type.decorator.python"] = { fg = palette.springViolet1, bold = true, italic = true },
+            ["@lsp.type.namespace.python"] = { fg = palette.carpYellow, bold = true },
+
+            -- Go: stronger type/interface/field/method/package separation.
+            ["@function.go"] = { fg = palette.crystalBlue, bold = true },
+            ["@function.call.go"] = { fg = palette.crystalBlue },
+            ["@function.method.go"] = { fg = palette.springBlue, bold = true },
+            ["@function.method.call.go"] = { fg = palette.springBlue },
+            ["@keyword.coroutine.go"] = { fg = palette.peachRed, bold = true },
+            ["@keyword.function.go"] = { fg = palette.dragonViolet, bold = true },
+            ["@type.go"] = { fg = palette.waveAqua2, bold = true },
+            ["@type.builtin.go"] = { fg = palette.springBlue, bold = true },
+            ["@variable.member.go"] = { fg = palette.carpYellow },
+            ["@lsp.type.interface.go"] = { fg = palette.springBlue, bold = true },
+            ["@lsp.type.namespace.go"] = { fg = palette.surimiOrange, bold = true },
+            ["@lsp.type.parameter.go"] = { fg = palette.oldWhite },
+            ["@lsp.type.property.go"] = { fg = palette.carpYellow },
+            ["@lsp.type.struct.go"] = { fg = palette.waveAqua2, bold = true },
+          }
+        end,
+      })
+
+      vim.cmd.colorscheme("kanagawa-dragon")
+    end,
+  },
+
   -- 文件浏览器：nvim-tree
   {
     "nvim-tree/nvim-tree.lua",

@@ -15,12 +15,26 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 --------------------------------------------------------------------------------
 -- Python provider / 项目 venv 解析
 --------------------------------------------------------------------------------
-local function resolve_python()
-  local cwd = vim.uv.cwd() or vim.fn.getcwd()
-  local project_python = cwd .. "/.venv/bin/python"
+local function path_exists(path)
+  return path ~= nil and vim.uv.fs_stat(path) ~= nil
+end
 
-  if vim.fn.executable(project_python) == 1 then
-    return project_python
+local function resolve_python(root_dir)
+  local candidates = {}
+  local cwd = vim.uv.cwd() or vim.fn.getcwd()
+
+  if root_dir and root_dir ~= "" then
+    table.insert(candidates, root_dir .. "/.venv/bin/python")
+  end
+
+  if cwd and cwd ~= "" and cwd ~= root_dir then
+    table.insert(candidates, cwd .. "/.venv/bin/python")
+  end
+
+  for _, candidate in ipairs(candidates) do
+    if vim.fn.executable(candidate) == 1 then
+      return candidate
+    end
   end
 
   local system_python = vim.fn.exepath("python3")
@@ -29,6 +43,78 @@ local function resolve_python()
   end
 
   return nil
+end
+
+local function python_root_dir()
+  return vim.fs.root(0, {
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg",
+    "requirements.txt",
+    ".venv",
+    ".git",
+  }) or vim.fn.getcwd()
+end
+
+local function python_has_module(python, module_name)
+  if not python or python == "" or vim.fn.executable(python) ~= 1 then
+    return false
+  end
+
+  vim.fn.system({ python, "-c", "import " .. module_name })
+  return vim.v.shell_error == 0
+end
+
+local function mason_debugpy_python()
+  local mason_python = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python"
+  if vim.fn.executable(mason_python) == 1 then
+    return mason_python
+  end
+
+  return nil
+end
+
+local function resolve_debugpy_python(root_dir)
+  local mason_python = mason_debugpy_python()
+  if mason_python then
+    return mason_python
+  end
+
+  local project_python = resolve_python(root_dir)
+  if python_has_module(project_python, "debugpy") then
+    return project_python
+  end
+
+  local system_python = vim.fn.exepath("python3")
+  if python_has_module(system_python, "debugpy") then
+    return system_python
+  end
+
+  return nil
+end
+
+local function pyright_settings(root_dir)
+  local settings = {
+    python = {
+      pythonPath = resolve_python(root_dir),
+      analysis = {
+        autoSearchPaths = true,
+        useLibraryCodeForTypes = true,
+        diagnosticMode = "workspace",
+      },
+    },
+  }
+
+  if root_dir and path_exists(root_dir .. "/.venv") then
+    settings.python.venvPath = root_dir
+    settings.python.venv = ".venv"
+  end
+
+  if root_dir and path_exists(root_dir .. "/src") then
+    settings.python.analysis.extraPaths = { root_dir .. "/src" }
+  end
+
+  return settings
 end
 
 local python_host = resolve_python()
@@ -169,6 +255,152 @@ function M.lsp_on_attach(_, bufnr)
 end
 
 --------------------------------------------------------------------------------
+-- DAP 配置
+--------------------------------------------------------------------------------
+function M.setup_dap()
+  local dap_status, dap = pcall(require, "dap")
+  local dapui_status, dapui = pcall(require, "dapui")
+  local dap_python_status, dap_python = pcall(require, "dap-python")
+  if not (dap_status and dapui_status and dap_python_status) then
+    return
+  end
+
+  dapui.setup({
+    controls = {
+      enabled = false,
+    },
+    layouts = {
+      {
+        elements = {
+          { id = "scopes", size = 0.50 },
+          { id = "breakpoints", size = 0.17 },
+          { id = "stacks", size = 0.17 },
+          { id = "watches", size = 0.16 },
+        },
+        position = "left",
+        size = 40,
+      },
+      {
+        elements = {
+          { id = "repl", size = 0.5 },
+          { id = "console", size = 0.5 },
+        },
+        position = "bottom",
+        size = 12,
+      },
+    },
+  })
+
+  vim.fn.sign_define("DapBreakpoint", {
+    text = "B",
+    texthl = "DiagnosticSignError",
+    linehl = "",
+    numhl = "",
+  })
+  vim.fn.sign_define("DapBreakpointCondition", {
+    text = "C",
+    texthl = "DiagnosticSignWarn",
+    linehl = "",
+    numhl = "",
+  })
+  vim.fn.sign_define("DapStopped", {
+    text = ">",
+    texthl = "DiagnosticSignInfo",
+    linehl = "Visual",
+    numhl = "",
+  })
+
+  dap.listeners.before.attach.dapui_config = function()
+    dapui.open()
+  end
+  dap.listeners.before.launch.dapui_config = function()
+    dapui.open()
+  end
+  dap.listeners.before.event_terminated.dapui_config = function()
+    dapui.close()
+  end
+  dap.listeners.before.event_exited.dapui_config = function()
+    dapui.close()
+  end
+
+  local registry_ok, mason_registry = pcall(require, "mason-registry")
+  if registry_ok then
+    local package_ok, debugpy_package = pcall(mason_registry.get_package, "debugpy")
+    if package_ok and debugpy_package and not debugpy_package:is_installed() then
+      debugpy_package:install()
+    end
+  end
+
+  local function project_python_path()
+    return resolve_python(python_root_dir())
+  end
+
+  local debugpy_python = resolve_debugpy_python(python_root_dir())
+  if debugpy_python then
+    dap_python.setup(debugpy_python)
+  else
+    vim.schedule(function()
+      vim.notify(
+        "Python 调试适配器未就绪。请等待 Mason 安装 debugpy，或手动执行 `python3 -m pip install debugpy`。",
+        vim.log.levels.WARN
+      )
+    end)
+  end
+
+  dap.configurations.python = {
+    {
+      type = "python",
+      request = "launch",
+      name = "Launch current file",
+      program = "${file}",
+      cwd = "${workspaceFolder}",
+      console = "integratedTerminal",
+      justMyCode = true,
+      pythonPath = project_python_path,
+    },
+    {
+      type = "python",
+      request = "launch",
+      name = "Launch current file with args",
+      program = "${file}",
+      cwd = "${workspaceFolder}",
+      console = "integratedTerminal",
+      justMyCode = true,
+      args = function()
+        local input = vim.trim(vim.fn.input("Args: "))
+        if input == "" then
+          return {}
+        end
+        return vim.split(input, "%s+", { trimempty = true })
+      end,
+      pythonPath = project_python_path,
+    },
+  }
+
+  vim.api.nvim_create_user_command("DapInstallPython", function()
+    local ok, registry = pcall(require, "mason-registry")
+    if not ok then
+      vim.notify("mason-registry 不可用，无法自动安装 debugpy。", vim.log.levels.ERROR)
+      return
+    end
+
+    local package_ok, debugpy_package = pcall(registry.get_package, "debugpy")
+    if not package_ok or not debugpy_package then
+      vim.notify("Mason registry 中未找到 debugpy 包。", vim.log.levels.ERROR)
+      return
+    end
+
+    if debugpy_package:is_installed() then
+      vim.notify("debugpy 已安装。", vim.log.levels.INFO)
+      return
+    end
+
+    debugpy_package:install()
+    vim.notify("已触发 Mason 安装 debugpy。", vim.log.levels.INFO)
+  end, { desc = "Install debugpy with Mason" })
+end
+
+--------------------------------------------------------------------------------
 -- LSP 配置
 --------------------------------------------------------------------------------
 function M.setup_lsp()
@@ -192,24 +424,16 @@ function M.setup_lsp()
   })
   vim.lsp.enable("gopls")
 
-  local pyright_python = resolve_python()
-  local cwd = vim.uv.cwd() or vim.fn.getcwd()
-
   vim.lsp.config("pyright", {
     capabilities = capabilities,
     on_attach = M.lsp_on_attach,
-    settings = {
-      python = {
-        pythonPath = pyright_python,
-        venvPath = cwd,
-        venv = ".venv",
-        analysis = {
-          autoSearchPaths = true,
-          useLibraryCodeForTypes = true,
-          diagnosticMode = "workspace",
-        },
-      },
-    },
+    before_init = function(_, config)
+      config.settings = pyright_settings(config.root_dir)
+    end,
+    on_new_config = function(config, root_dir)
+      config.settings = pyright_settings(root_dir)
+    end,
+    settings = pyright_settings(vim.uv.cwd() or vim.fn.getcwd()),
   })
   vim.lsp.enable("pyright")
 

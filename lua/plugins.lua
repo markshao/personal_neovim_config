@@ -139,6 +139,21 @@ local plugins = {
     },
   },
 
+  -- 调试：nvim-dap / dap-ui / Python 调试支持
+  {
+    "mfussenegger/nvim-dap",
+    event = "VeryLazy",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "rcarriga/nvim-dap-ui",
+      "nvim-neotest/nvim-nio",
+      "mfussenegger/nvim-dap-python",
+    },
+    config = function()
+      require("configs").setup_dap()
+    end,
+  },
+
   -- 自动代码补全：nvim-cmp 及其生态
   {
     "hrsh7th/nvim-cmp",

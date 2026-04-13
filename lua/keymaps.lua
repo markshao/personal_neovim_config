@@ -57,3 +57,53 @@ map("n", "<leader>gB", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "
 map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview git hunk" })
 map("n", "]c", "<cmd>Gitsigns next_hunk<CR>", { desc = "Next git hunk" })
 map("n", "[c", "<cmd>Gitsigns prev_hunk<CR>", { desc = "Prev git hunk" })
+
+-- 调试 (DAP) 快捷键速查
+-- F5         启动/继续调试
+-- F10        单步跳过 (step over)
+-- F11        单步进入 (step into)
+-- F12        单步跳出 (step out)
+-- <leader>db 切换断点
+-- <leader>dB 条件断点
+-- <leader>du 切换调试 UI
+-- <leader>dr 打开调试 REPL
+-- <leader>dl 复用上次调试配置
+-- <leader>dx 终止调试
+-- <leader>dm 调试当前测试方法
+-- <leader>dC 调试当前测试类
+map("n", "<F5>", function()
+  require("dap").continue()
+end, { desc = "Debug continue/start" })
+map("n", "<F10>", function()
+  require("dap").step_over()
+end, { desc = "Debug step over" })
+map("n", "<F11>", function()
+  require("dap").step_into()
+end, { desc = "Debug step into" })
+map("n", "<F12>", function()
+  require("dap").step_out()
+end, { desc = "Debug step out" })
+map("n", "<leader>db", function()
+  require("dap").toggle_breakpoint()
+end, { desc = "Toggle breakpoint" })
+map("n", "<leader>dB", function()
+  require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
+end, { desc = "Set conditional breakpoint" })
+map("n", "<leader>dr", function()
+  require("dap").repl.open()
+end, { desc = "Open debug REPL" })
+map("n", "<leader>du", function()
+  require("dapui").toggle()
+end, { desc = "Toggle debug UI" })
+map("n", "<leader>dl", function()
+  require("dap").run_last()
+end, { desc = "Run last debug config" })
+map("n", "<leader>dx", function()
+  require("dap").terminate()
+end, { desc = "Terminate debug session" })
+map("n", "<leader>dm", function()
+  require("dap-python").test_method()
+end, { desc = "Debug Python test method" })
+map("n", "<leader>dC", function()
+  require("dap-python").test_class()
+end, { desc = "Debug Python test class" })

@@ -263,6 +263,19 @@ local plugins = {
       })
     end,
   },
+
+  -- 浮动终端
+  {
+    "akinsho/toggleterm.nvim",
+    version = "*",
+    cmd = { "ToggleTerm", "TermExec" },
+    keys = {
+      { "<leader>t", "<cmd>ToggleTerm direction=float<CR>", desc = "Toggle floating terminal" },
+    },
+    config = function()
+      require("configs").setup_toggleterm()
+    end,
+  },
 }
 
 -- 3. 配置 lazy.nvim

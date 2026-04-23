@@ -57,6 +57,8 @@ map("n", "<leader>gB", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "
 map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview git hunk" })
 map("n", "]c", "<cmd>Gitsigns next_hunk<CR>", { desc = "Next git hunk" })
 map("n", "[c", "<cmd>Gitsigns prev_hunk<CR>", { desc = "Prev git hunk" })
+map("n", "<leader>t", "<cmd>ToggleTerm direction=float<CR>", { desc = "Toggle floating terminal" })
+map("t", "<leader>t", [[<C-\><C-n><cmd>ToggleTerm direction=float<CR>]], { desc = "Toggle floating terminal" })
 
 -- 调试 (DAP) 快捷键速查
 -- F5         启动/继续调试

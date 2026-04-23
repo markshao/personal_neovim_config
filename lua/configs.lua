@@ -254,6 +254,32 @@ function M.lsp_on_attach(_, bufnr)
   end, bufopts)
 end
 
+function M.setup_toggleterm()
+  local status, toggleterm = pcall(require, "toggleterm")
+  if not status then
+    return
+  end
+
+  toggleterm.setup({
+    open_mapping = nil,
+    start_in_insert = true,
+    insert_mappings = false,
+    terminal_mappings = false,
+    persist_size = false,
+    shade_terminals = true,
+    direction = "float",
+    float_opts = {
+      border = "curved",
+      width = function()
+        return math.floor(vim.o.columns * 0.9)
+      end,
+      height = function()
+        return math.floor(vim.o.lines * 0.85)
+      end,
+    },
+  })
+end
+
 --------------------------------------------------------------------------------
 -- DAP 配置
 --------------------------------------------------------------------------------
